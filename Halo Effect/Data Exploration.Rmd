@@ -1,0 +1,62 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+#Install libraries if not installed, else load them-----------------------------
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+# usage
+packages <- c("ggplot2", "ISLR", "DataExplorer", "RColorBrewer", "dplyr","Boruta", "data.table","rpart","randomForest","xgboost","DescTools","Hmisc","ggcorrplot","MASS","tidyverse","caret","precrec","ROCR")
+ipak(packages)
+
+options(scipen=999)
+
+#Set seed and working directory-------------------------------------------------
+set.seed(100)
+
+## ---------------------------------------------------
+#Read data file
+raw_data = fread('data.csv')
+
+#Feature selection - we can use either Lasso or Boruta
+set.seed(100)
+raw_data[is.na(raw_data)] <- 0
+boruta.train <- Boruta(postvote_presvtwho~.-c(V1,version,caseid), data = raw_data, doTrace = 2)
+```
+
+```{r}
+print(boruta.train)
+```
+```{r}
+plot(boruta.train, xlab = "", xaxt = "n")
+```
+```{r}
+
+lz<-lapply(1:ncol(boruta.train$ImpHistory),function(i)
+boruta.train$ImpHistory[is.finite(boruta.train$ImpHistory[,i]),i])
+
+```
+
+```{r}
+final.boruta <- TentativeRoughFix(boruta.train)
+print(final.boruta)
+```
+```{r}
+getSelectedAttributes(final.boruta, withTentative = F)
+
+boruta.df <- attStats(final.boruta)
+
+
+```
+
+```{r}
+write.csv(boruta.df,'featsel.csv',row.names = T)
+```
